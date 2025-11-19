@@ -3,6 +3,9 @@
 This is a custom Home Assistant integration for monitoring an energy meter
 device accessible over LAN.
 
+> **✨ Recently Updated:** Critical fixes for resource leaks and reliability
+> improvements. See [`IMPROVEMENTS.md`](IMPROVEMENTS.md) for details.
+
 ## Installation
 
 ### HACS Installation (Recommended)
@@ -85,9 +88,42 @@ in the format:
 }
 ```
 
+## Testing
+
+For testing the integration with a mock server and comprehensive testing
+procedures, see:
+
+- **[`tests/TESTING.md`](tests/TESTING.md)** - Complete testing guide
+- **[`tests/mock_server.py`](tests/mock_server.py)** - Mock API server for
+  testing
+- **[`tests/test_api.py`](tests/test_api.py)** - Automated API tests
+
+Quick test:
+
+```bash
+# Start mock server
+python3 tests/mock_server.py
+
+# Run tests
+python3 tests/test_api.py
+```
+
+## Recent Improvements
+
+Critical fixes have been implemented for production reliability:
+
+- ✅ Fixed memory leaks from unclosed aiohttp sessions
+- ✅ Refactored sensors to use coordinator data directly
+- ✅ Added comprehensive data validation
+- ✅ Improved error handling and logging
+
+See [`IMPROVEMENTS.md`](IMPROVEMENTS.md) for complete details.
+
 ## Troubleshooting
 
 - Ensure the energy meter is connected to the same network as Home Assistant
 - Verify the IP address is correct and the device is responding
-- Check Home Assistant logs for connection errors
+- Check Home Assistant logs for connection errors (set log level to `debug` for
+  detailed info)
 - The integration will retry failed requests automatically
+- For testing issues, see [`tests/TESTING.md`](tests/TESTING.md)

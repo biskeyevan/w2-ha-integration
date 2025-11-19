@@ -27,6 +27,10 @@ async def async_setup_entry(
 
     entities = []
     data = coordinator.data
+    
+    if not data:
+        _LOGGER.warning("No data available from coordinator during setup")
+        return
 
     # Create sensors for each channel
     for channel in data.get("channels", []):
@@ -36,11 +40,12 @@ async def async_setup_entry(
 
         # Power sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterChannelSensor(
                 coordinator,
                 f"{label} Power",
                 f"power_ch{ch}",
-                channel["p_W"],
+                ch,
+                "p_W",
                 SensorDeviceClass.POWER,
                 SensorStateClass.MEASUREMENT,
                 "W",
@@ -49,37 +54,42 @@ async def async_setup_entry(
 
         # Energy Import sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterChannelSensor(
                 coordinator,
                 f"{label} Energy Import",
                 f"energy_import_ch{ch}",
-                channel["eImp_Ws"] / 3600000,  # Convert Ws to kWh
+                ch,
+                "eImp_Ws",
                 SensorDeviceClass.ENERGY,
                 SensorStateClass.TOTAL_INCREASING,
                 "kWh",
+                conversion_factor=1/3600000,  # Ws to kWh
             )
         )
 
         # Energy Export sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterChannelSensor(
                 coordinator,
                 f"{label} Energy Export",
                 f"energy_export_ch{ch}",
-                channel["eExp_Ws"] / 3600000,  # Convert Ws to kWh
+                ch,
+                "eExp_Ws",
                 SensorDeviceClass.ENERGY,
                 SensorStateClass.TOTAL_INCREASING,
                 "kWh",
+                conversion_factor=1/3600000,  # Ws to kWh
             )
         )
 
         # Voltage sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterChannelSensor(
                 coordinator,
                 f"{label} Voltage",
                 f"voltage_ch{ch}",
-                channel["v_V"],
+                ch,
+                "v_V",
                 SensorDeviceClass.VOLTAGE,
                 SensorStateClass.MEASUREMENT,
                 "V",
@@ -92,11 +102,12 @@ async def async_setup_entry(
 
         # CT Power sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterCTSensor(
                 coordinator,
                 f"CT {ct_num} Power",
                 f"ct_power_ct{ct_num}",
-                ct["p_W"],
+                ct_num,
+                "p_W",
                 SensorDeviceClass.POWER,
                 SensorStateClass.MEASUREMENT,
                 "W",
@@ -105,11 +116,12 @@ async def async_setup_entry(
 
         # CT Current sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterCTSensor(
                 coordinator,
                 f"CT {ct_num} Current",
                 f"ct_current_ct{ct_num}",
-                ct["i_A"],
+                ct_num,
+                "i_A",
                 SensorDeviceClass.CURRENT,
                 SensorStateClass.MEASUREMENT,
                 "A",
@@ -118,11 +130,12 @@ async def async_setup_entry(
 
         # CT Voltage sensor
         entities.append(
-            EnergyMeterSensor(
+            EnergyMeterCTSensor(
                 coordinator,
                 f"CT {ct_num} Voltage",
                 f"ct_voltage_ct{ct_num}",
-                ct["v_V"],
+                ct_num,
+                "v_V",
                 SensorDeviceClass.VOLTAGE,
                 SensorStateClass.MEASUREMENT,
                 "V",
@@ -132,124 +145,91 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class EnergyMeterSensor(CoordinatorEntity, SensorEntity):
-    """Representation of an Energy Meter sensor."""
+class EnergyMeterChannelSensor(CoordinatorEntity, SensorEntity):
+    """Representation of an Energy Meter channel sensor."""
 
     def __init__(
         self,
         coordinator,
         name,
         unique_id,
-        initial_value,
+        channel_number,
+        data_key,
+        device_class,
+        state_class,
+        unit,
+        conversion_factor=1,
+    ):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_state_class = state_class
+        self._attr_native_unit_of_measurement = unit
+        self._channel_number = channel_number
+        self._data_key = data_key
+        self._conversion_factor = conversion_factor
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if not self.coordinator.data:
+            return None
+        
+        for channel in self.coordinator.data.get("channels", []):
+            if channel.get("ch") == self._channel_number:
+                value = channel.get(self._data_key)
+                if value is not None:
+                    return value * self._conversion_factor
+                return None
+        return None
+
+    @property
+    def device_info(self):
+        """Return device information."""
+        return {
+            "identifiers": {(DOMAIN, "energy_meter")},
+            "name": "Energy Meter",
+            "manufacturer": "Unknown",
+            "model": "LAN Energy Meter",
+        }
+
+
+class EnergyMeterCTSensor(CoordinatorEntity, SensorEntity):
+    """Representation of an Energy Meter CT sensor."""
+
+    def __init__(
+        self,
+        coordinator,
+        name,
+        unique_id,
+        ct_number,
+        data_key,
         device_class,
         state_class,
         unit,
     ):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._name = name
-        self._unique_id = unique_id
-        self._device_class = device_class
-        self._state_class = state_class
-        self._unit = unit
-        self._value = initial_value
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_state_class = state_class
+        self._attr_native_unit_of_measurement = unit
+        self._ct_number = ct_number
+        self._data_key = data_key
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def unique_id(self):
-        """Return the unique ID of the sensor."""
-        return self._unique_id
-
-    @property
-    def device_class(self):
-        """Return the device class."""
-        return self._device_class
-
-    @property
-    def state_class(self):
-        """Return the state class."""
-        return self._state_class
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return self._unit
-
-    @property
-    def state(self):
+    def native_value(self):
         """Return the state of the sensor."""
-        return self._value
-
-    def _update_value(self, data):
-        """Update the sensor value from data."""
-        # Extract value based on unique_id
-        if "power" in self._unique_id:
-            # Power sensors
-            if "ch" in self._unique_id:
-                ch = int(self._unique_id.split("ch")[1])
-                for channel in data.get("channels", []):
-                    if channel["ch"] == ch:
-                        self._value = channel["p_W"]
-                        break
-            elif "ct" in self._unique_id:
-                ct = int(self._unique_id.split("ct")[1])
-                for ct_data in data.get("cts", []):
-                    if ct_data["ct"] == ct:
-                        self._value = ct_data["p_W"]
-                        break
-        elif "energy_import" in self._unique_id:
-            ch = int(self._unique_id.split("ch")[1])
-            for channel in data.get("channels", []):
-                if channel["ch"] == ch:
-                    self._value = channel["eImp_Ws"] / 3600000  # Ws to kWh
-                    break
-        elif "energy_export" in self._unique_id:
-            ch = int(self._unique_id.split("ch")[1])
-            for channel in data.get("channels", []):
-                if channel["ch"] == ch:
-                    self._value = channel["eExp_Ws"] / 3600000  # Ws to kWh
-                    break
-        elif "voltage" in self._unique_id:
-            if "ch" in self._unique_id:
-                ch = int(self._unique_id.split("ch")[1])
-                for channel in data.get("channels", []):
-                    if channel["ch"] == ch:
-                        self._value = channel["v_V"]
-                        break
-            elif "ct" in self._unique_id:
-                ct = int(self._unique_id.split("ct")[1])
-                for ct_data in data.get("cts", []):
-                    if ct_data["ct"] == ct:
-                        self._value = ct_data["v_V"]
-                        break
-        elif "current" in self._unique_id:
-            ct = int(self._unique_id.split("ct")[1])
-            for ct_data in data.get("cts", []):
-                if ct_data["ct"] == ct:
-                    self._value = ct_data["i_A"]
-                    break
-
-    async def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        _LOGGER.debug("Sensor %s received coordinator update", self._unique_id)
-        if self.coordinator.data is None:
-            _LOGGER.warning("Coordinator data is None for sensor %s", self._unique_id)
-            return
+        if not self.coordinator.data:
+            return None
         
-        old_value = self._value
-        self._update_value(self.coordinator.data)
-        
-        if old_value != self._value:
-            _LOGGER.debug("Sensor %s value changed from %s to %s", self._unique_id, old_value, self._value)
-        else:
-            _LOGGER.debug("Sensor %s value unchanged: %s", self._unique_id, self._value)
-            
-        self.async_write_ha_state()
-        _LOGGER.debug("Sensor %s state written to HA", self._unique_id)
+        for ct in self.coordinator.data.get("cts", []):
+            if ct.get("ct") == self._ct_number:
+                return ct.get(self._data_key)
+        return None
 
     @property
     def device_info(self):

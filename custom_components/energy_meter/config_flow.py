@@ -27,7 +27,10 @@ class EnergyMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await api_client.async_get_data()
             except Exception:
                 errors["host"] = "cannot_connect"
-            else:
+            finally:
+                await api_client.async_close()
+            
+            if not errors:
                 return self.async_create_entry(
                     title=f"Energy Meter ({user_input['host']})",
                     data=user_input,
