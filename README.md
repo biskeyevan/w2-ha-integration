@@ -5,6 +5,25 @@ device accessible over LAN.
 
 ## Installation
 
+### HACS Installation (Recommended)
+
+1. Ensure [HACS](https://hacs.xyz/) is installed in your Home Assistant
+   instance.
+2. In Home Assistant, go to HACS > Integrations.
+3. Click the three dots in the top right corner and select "Custom
+   repositories".
+4. Add this repository URL: `https://github.com/yourusername/w2-ha-integration`
+5. Select "Integration" as the category.
+6. Click "Add".
+7. Search for "Energy Meter" in HACS and install it.
+8. Restart Home Assistant.
+9. Go to Settings > Devices & Services > Add Integration.
+10. Search for "Energy Meter" and select it.
+11. Enter the IP address of your energy meter device (e.g., 192.168.1.66).
+12. The integration will test the connection and create sensors.
+
+### Manual Installation
+
 1. Copy the `custom_components/energy_meter` directory to your Home Assistant
    `custom_components` folder.
 2. Restart Home Assistant.
