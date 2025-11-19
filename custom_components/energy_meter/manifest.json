@@ -1,0 +1,12 @@
+{
+  "domain": "energy_meter",
+  "name": "Energy Meter",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/energy_meter",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "1.0.0"
+}
