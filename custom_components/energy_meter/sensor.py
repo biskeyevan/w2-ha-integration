@@ -230,6 +230,11 @@ class EnergyMeterSensor(CoordinatorEntity, SensorEntity):
                     self._value = ct_data["i_A"]
                     break
 
+    async def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_value(self.coordinator.data)
+        self.async_write_ha_state()
+
     @property
     def device_info(self):
         """Return device information."""
