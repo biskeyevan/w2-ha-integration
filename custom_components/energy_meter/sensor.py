@@ -1,5 +1,6 @@
 """Sensor platform for Energy Meter integration."""
 from __future__ import annotations
+import logging
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -12,6 +13,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -232,8 +235,21 @@ class EnergyMeterSensor(CoordinatorEntity, SensorEntity):
 
     async def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        _LOGGER.debug("Sensor %s received coordinator update", self._unique_id)
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data is None for sensor %s", self._unique_id)
+            return
+        
+        old_value = self._value
         self._update_value(self.coordinator.data)
+        
+        if old_value != self._value:
+            _LOGGER.debug("Sensor %s value changed from %s to %s", self._unique_id, old_value, self._value)
+        else:
+            _LOGGER.debug("Sensor %s value unchanged: %s", self._unique_id, self._value)
+            
         self.async_write_ha_state()
+        _LOGGER.debug("Sensor %s state written to HA", self._unique_id)
 
     @property
     def device_info(self):

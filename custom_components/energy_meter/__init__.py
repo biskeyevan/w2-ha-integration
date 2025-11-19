@@ -25,10 +25,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def async_update_data():
         """Fetch data from API endpoint."""
+        _LOGGER.debug("Starting data update from coordinator")
         try:
-            return await api_client.async_get_data()
+            data = await api_client.async_get_data()
+            _LOGGER.debug("Successfully fetched data: %s", data)
+            return data
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with API: {err}")
+            _LOGGER.error("Failed to fetch data from API: %s", err, exc_info=True)
+            # Do not raise UpdateFailed to allow coordinator to continue
+            return None
 
     coordinator = DataUpdateCoordinator(
         hass,
