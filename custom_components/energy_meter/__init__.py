@@ -32,15 +32,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return data
         except Exception as err:
             _LOGGER.error("Failed to fetch data from API: %s", err, exc_info=True)
-            # Do not raise UpdateFailed to allow coordinator to continue
-            return None
+            raise UpdateFailed(f"Error communicating with API: {err}")
 
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
         name="energy_meter",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=1),
+        update_interval=timedelta(seconds=30),
     )
 
     await coordinator.async_config_entry_first_refresh()

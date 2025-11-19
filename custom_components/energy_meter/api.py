@@ -27,15 +27,14 @@ class EnergyMeterApiClient:
         """Get data from the API."""
         _LOGGER.debug("Making API request to: %s", self.endpoint)
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-                async with session.get(self.endpoint) as response:
-                    _LOGGER.debug("API responded with status: %s", response.status)
-                    if response.status != 200:
-                        _LOGGER.error("Error fetching data: %s", response.status)
-                        raise Exception(f"HTTP {response.status}")
-                    data = await response.json()
-                    _LOGGER.debug("API returned data with keys: %s", list(data.keys()) if isinstance(data, dict) else "non-dict")
-                    return data
+            async with self.session.get(self.endpoint) as response:
+                _LOGGER.debug("API responded with status: %s", response.status)
+                if response.status != 200:
+                    _LOGGER.error("Error fetching data: %s", response.status)
+                    raise Exception(f"HTTP {response.status}")
+                data = await response.json()
+                _LOGGER.debug("API returned data with keys: %s", list(data.keys()) if isinstance(data, dict) else "non-dict")
+                return data
         except Exception as err:
             _LOGGER.error("Exception in API request: %s", err, exc_info=True)
             raise
